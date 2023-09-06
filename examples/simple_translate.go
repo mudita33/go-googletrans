@@ -5,7 +5,7 @@ package main
 
 import (
 	"fmt"
-	translator "github.com/Conight/go-googletrans"
+	translator "github.com/mudita33/go-googletrans"
 )
 
 var content = `你好，世界！`

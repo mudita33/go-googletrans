@@ -1,4 +1,4 @@
-module github.com/Conight/go-googletrans
+module github.com/mudita33/go-googletrans
 
 go 1.21
 
