@@ -5,19 +5,22 @@ package main
 
 import (
 	"fmt"
-	"github.com/Conight/go-googletrans"
+	translator "github.com/Conight/go-googletrans"
 )
 
 var content = `你好，世界！`
 
 func main() {
+	agent := true
 	c := translator.Config{
-		Proxy:       "http://127.0.0.1:7890",
-		UserAgent:   []string{"Custom Agent"},
-		ServiceUrls: []string{"translate.google.com.hk"},
+		Proxy:                 []string{"http://127.0.0.1:8080"},
+		UserAgent:             nil,
+		ServiceUrls:           []string{"translate.google.com.hk"},
+		UseUserAgentGenerator: &agent,
 	}
 	t := translator.New(c)
-	result, err := t.Translate(content, "auto", "en")
+	client := t.Client()
+	result, err := client.Translate(content, "auto", "en")
 	if err != nil {
 		panic(err)
 	}

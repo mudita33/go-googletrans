@@ -4,19 +4,20 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/brianvoe/gofakeit/v6"
 	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 )
 
 // Config basic config.
 type Config struct {
-	ServiceUrls []string
-	UserAgent   []string
-	Proxy       string
+	ServiceUrls           []string
+	UserAgent             []string
+	Proxy                 []string
+	UseUserAgentGenerator *bool
 }
 
 // Translated result object.
@@ -35,6 +36,11 @@ type sentence struct {
 	Trans   string `json:"trans"`
 	Orig    string `json:"orig"`
 	Backend int    `json:"backend"`
+}
+
+type Provider struct {
+	config Config
+	faker  *gofakeit.Faker
 }
 
 type Translator struct {
@@ -66,12 +72,65 @@ func newAddHeaderTransport(T http.RoundTripper, defaultHeaders map[string]string
 	return &addHeaderTransport{T, defaultHeaders}
 }
 
-func New(config ...Config) *Translator {
-	rand.Seed(time.Now().Unix())
+func New(config ...Config) *Provider {
+
 	var c Config
 	if len(config) > 0 {
 		c = config[0]
 	}
+
+	if c.UseUserAgentGenerator != nil && *c.UseUserAgentGenerator {
+		return &Provider{
+			faker:  gofakeit.NewCrypto(),
+			config: c,
+		}
+	}
+
+	return &Provider{
+		faker:  nil,
+		config: c,
+	}
+
+}
+
+func (p *Provider) Client(config ...Config) *Translator {
+
+	var c Config
+
+	if len(p.config.Proxy) > 0 {
+		c.Proxy = p.config.Proxy
+	}
+
+	c.UseUserAgentGenerator = p.config.UseUserAgentGenerator
+
+	if len(p.config.UserAgent) > 0 {
+		c.UserAgent = p.config.UserAgent
+	}
+
+	if len(p.config.ServiceUrls) > 0 {
+		c.ServiceUrls = p.config.ServiceUrls
+	}
+
+	//--
+	if len(config) > 0 {
+		conf := config[0]
+		if len(conf.Proxy) > 0 {
+			c.Proxy = conf.Proxy
+		}
+
+		if conf.UseUserAgentGenerator != nil {
+			c.UseUserAgentGenerator = conf.UseUserAgentGenerator
+		}
+
+		if len(conf.UserAgent) > 0 {
+			c.UserAgent = conf.UserAgent
+		}
+
+		if len(conf.ServiceUrls) > 0 {
+			c.ServiceUrls = conf.ServiceUrls
+		}
+	}
+
 	// set default value
 	if len(c.ServiceUrls) == 0 {
 		c.ServiceUrls = []string{"translate.google.com"}
@@ -80,9 +139,21 @@ func New(config ...Config) *Translator {
 		c.UserAgent = []string{defaultUserAgent}
 	}
 
+	var userAgent string
+
+	if c.UseUserAgentGenerator != nil && *c.UseUserAgentGenerator && p.faker != nil {
+		userAgent = p.faker.UserAgent()
+	} else {
+		userAgent = randomChoose(c.UserAgent)
+	}
+
 	host := randomChoose(c.ServiceUrls)
-	userAgent := randomChoose(c.UserAgent)
-	proxy := c.Proxy
+
+	var proxy string
+
+	if len(c.Proxy) > 0 {
+		proxy = randomChoose(c.Proxy)
+	}
 
 	transport := &http.Transport{}
 	// Skip verifies the server's certificate chain and host name.
