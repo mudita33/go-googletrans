@@ -28,6 +28,10 @@ type Translated struct {
 	Text   string // translated text
 }
 
+type Client struct {
+	Proxy string
+}
+
 type sentences struct {
 	Sentences []sentence `json:"sentences"`
 }
@@ -47,6 +51,7 @@ type Translator struct {
 	host   string
 	client *http.Client
 	ta     *tokenAcquirer
+	proxy  string
 }
 
 func randomChoose(slice []string) string {
@@ -176,6 +181,7 @@ func (p *Provider) Client(config ...Config) *Translator {
 		host:   host,
 		client: client,
 		ta:     ta,
+		proxy:  proxy,
 	}
 }
 
@@ -256,6 +262,9 @@ func (a *Translator) translate(client *http.Client, origin, src, dest string) (s
 	}
 }
 
+func (a *Translator) ClientInfo() *Client {
+	return &Client{Proxy: a.proxy}
+}
 func buildParams(query, src, dest, token string) map[string]string {
 	params := map[string]string{
 		"client": "gtx",
